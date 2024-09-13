@@ -176,7 +176,6 @@ def transcribe_audio(audio_file):
       model="whisper-large-v3",
       prompt="",
       response_format="json",
-      language="en",
       temperature=0.0 
     )
 
