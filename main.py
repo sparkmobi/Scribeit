@@ -182,7 +182,7 @@ def transcribe_audio(audio_file):
     results = transcription.text
     return results
 
-def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
+def generate_notes_structure(transcript: str, model: str = "llama-3.1-70b-versatile"):
     """
     Returns notes structure content as well as total tokens and total time for generation.
     """
@@ -221,7 +221,7 @@ def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
 
     return statistics_to_return, completion.choices[0].message.content
 
-def generate_section(transcript: str, existing_notes: str, section: str, model: str = "llama3-8b-8192"):
+def generate_section(transcript: str, existing_notes: str, section: str, model: str = "llama-3.1-8b-instant"):
     stream = st.session_state.groq.chat.completions.create(
         model=model,
         messages=[
