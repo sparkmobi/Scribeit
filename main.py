@@ -6,10 +6,15 @@ from io import BytesIO
 from md2pdf.core import md2pdf
 from dotenv import load_dotenv
 from download import download_video_audio, delete_download
+from supabase import create_client, Client
 
 load_dotenv()
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", None)
+SUPABASE_URL = 'https://bbglarxiekabgtodknsj.supabase.co'
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJiZ2xhcnhpZWthYmd0b2RrbnNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjYyNjE0OTksImV4cCI6MjA0MTgzNzQ5OX0.WrwqspZc88dhUkRNh0ed9ojAl3VPr9iJBL9Z_oIpUww"
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 MAX_FILE_SIZE = 25 * 1024 * 1024  # 25 MB
 FILE_TOO_LARGE_MESSAGE = "The audio file is too large for the current size and rate limits using Whisper. If you used a YouTube link, please try a shorter video clip. If you uploaded an audio file, try trimming or compressing the audio to under 25 MB."
@@ -352,9 +357,19 @@ try:
                 file_name='generated_notes.pdf',
                 mime='application/pdf'
             )
+
+            # Add new button for saving to Supabase
+            if st.button('Save Notes to Supabase'):
+                notes_content = st.session_state.notes.get_markdown_content()
+                saved_id = save_notes_to_supabase(notes_content)
+                if saved_id:
+                    st.success(f"Notes saved to Supabase with ID: {saved_id}")
+                else:
+                    st.error("Failed to save notes to Supabase")
+
             st.session_state.button_disabled = False
         else:
-            raise ValueError("Please generate content first before downloading the notes.")
+            raise ValueError("Please generate content first before downloading or saving the notes.")
 
     input_method = st.radio("Choose input method:", ["Upload audio file", "YouTube link"])
     audio_file = None
@@ -499,3 +514,12 @@ except Exception as e:
     # Remove audio after exception to prevent data storage leak
     if audio_file_path is not None:
         delete_download(audio_file_path)
+
+# Add this function to save notes to Supabase
+def save_notes_to_supabase(notes_content):
+    try:
+        response = supabase.table("notes").insert({"content": notes_content}).execute()
+        return response.data[0]['id']  # Return the ID of the inserted record
+    except Exception as e:
+        st.error(f"Failed to save notes to Supabase: {str(e)}")
+        return None
