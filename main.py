@@ -14,7 +14,28 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", None)
 SUPABASE_URL = 'https://bbglarxiekabgtodknsj.supabase.co'
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJiZ2xhcnhpZWthYmd0b2RrbnNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjYyNjE0OTksImV4cCI6MjA0MTgzNzQ5OX0.WrwqspZc88dhUkRNh0ed9ojAl3VPr9iJBL9Z_oIpUww"
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Attempt to import optional dependencies
+try:
+    from groq import Groq
+    GROQ_AVAILABLE = True
+except ImportError:
+    GROQ_AVAILABLE = False
+    st.warning("Groq library is not installed. Some features may not be available.")
+
+try:
+    from md2pdf.core import md2pdf
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
+    st.warning("md2pdf library is not installed. PDF export will not be available.")
+
+try:
+    from supabase import create_client, Client
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    SUPABASE_AVAILABLE = True
+except ImportError:
+    SUPABASE_AVAILABLE = False
+    st.warning("Supabase library is not installed. Saving to Supabase will not be available.")
 
 MAX_FILE_SIZE = 25 * 1024 * 1024  # 25 MB
 FILE_TOO_LARGE_MESSAGE = "The audio file is too large for the current size and rate limits using Whisper. If you used a YouTube link, please try a shorter video clip. If you uploaded an audio file, try trimming or compressing the audio to under 25 MB."
@@ -24,7 +45,7 @@ audio_file_path = None
 if 'api_key' not in st.session_state:
     st.session_state.api_key = GROQ_API_KEY
 
-if 'groq' not in st.session_state:
+if 'groq' not in st.session_state and GROQ_AVAILABLE:
     if GROQ_API_KEY:
         st.session_state.groq = Groq()
 
@@ -167,6 +188,9 @@ def create_pdf_file(content: str):
     """
     Create a PDF file from the provided content.
     """
+    if not PDF_AVAILABLE:
+        st.error("md2pdf library is not installed. Cannot create PDF.")
+        return None
     pdf_buffer = BytesIO()
     md2pdf(pdf_buffer, md_content=content)
     pdf_buffer.seek(0)
@@ -349,23 +373,29 @@ try:
                 mime='text/plain'
             )
 
-            # Create pdf file (styled)
-            pdf_file = create_pdf_file(st.session_state.notes.get_markdown_content())
-            st.download_button(
-                label='Download PDF',
-                data=pdf_file,
-                file_name='generated_notes.pdf',
-                mime='application/pdf'
-            )
+            # Create pdf file (styled) if available
+            if PDF_AVAILABLE:
+                pdf_file = create_pdf_file(st.session_state.notes.get_markdown_content())
+                st.download_button(
+                    label='Download PDF',
+                    data=pdf_file,
+                    file_name='generated_notes.pdf',
+                    mime='application/pdf'
+                )
+            else:
+                st.info("PDF export is not available. Install md2pdf to enable this feature.")
 
-            # Add new button for saving to Supabase
-            if st.button('Save Notes to Supabase'):
-                notes_content = st.session_state.notes.get_markdown_content()
-                saved_id = save_notes_to_supabase(notes_content)
-                if saved_id:
-                    st.success(f"Notes saved to Supabase with ID: {saved_id}")
-                else:
-                    st.error("Failed to save notes to Supabase")
+            # Add new button for saving to Supabase if available
+            if SUPABASE_AVAILABLE:
+                if st.button('Save Notes to Supabase'):
+                    notes_content = st.session_state.notes.get_markdown_content()
+                    saved_id = save_notes_to_supabase(notes_content)
+                    if saved_id:
+                        st.success(f"Notes saved to Supabase with ID: {saved_id}")
+                    else:
+                        st.error("Failed to save notes to Supabase")
+            else:
+                st.info("Saving to Supabase is not available. Install the Supabase library to enable this feature.")
 
             st.session_state.button_disabled = False
         else:
@@ -517,6 +547,10 @@ except Exception as e:
 
 # Add this function to save notes to Supabase
 def save_notes_to_supabase(notes_content):
+    if not SUPABASE_AVAILABLE:
+        st.error("Supabase library is not installed. Cannot save notes.")
+        return None
+    
     try:
         response = supabase.table("notes").insert({"content": notes_content}).execute()
         return response.data[0]['id']  # Return the ID of the inserted record
