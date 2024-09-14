@@ -6,7 +6,6 @@ from io import BytesIO
 from md2pdf.core import md2pdf
 from dotenv import load_dotenv
 from download import download_video_audio, delete_download
-import html
 
 load_dotenv()
 
@@ -168,51 +167,20 @@ def create_pdf_file(content: str):
     pdf_buffer.seek(0)
     return pdf_buffer
 
-def create_html_file(content: str) -> BytesIO:
-    """
-    Create an HTML file from the provided content.
-    """
-    html_content = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Generated Notes</title>
-        <style>
-            body {{ font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }}
-            h1, h2, h3, h4, h5, h6 {{ margin-top: 20px; }}
-        </style>
-    </head>
-    <body>
-        {html.escape(content)}
-    </body>
-    </html>
-    """
-    html_file = BytesIO()
-    html_file.write(html_content.encode('utf-8'))
-    html_file.seek(0)
-    return html_file
-
 def transcribe_audio(audio_file):
     """
-    Reads the content of a text file and returns it as the transcription.
+    Transcribes audio using Groq's Whisper API.
     """
-    if audio_file.name.endswith('.txt'):
-        # Read the content of the text file
-        transcription = audio_file.read().decode('utf-8')
-    else:
-        # For non-text files, use the original Groq transcription
-        transcription = st.session_state.groq.audio.transcriptions.create(
-            file=audio_file,
-            model="whisper-large-v3",
-            prompt="",
-            response_format="json",
-            temperature=0.0 
-        )
-        transcription = transcription.text
+    transcription = st.session_state.groq.audio.transcriptions.create(
+      file=audio_file,
+      model="whisper-large-v3",
+      prompt="",
+      response_format="json",
+      temperature=0.0 
+    )
 
-    return transcription
+    results = transcription.text
+    return results
 
 def generate_notes_structure(transcript: str, model: str = "llama-3.1-70b-versatile"):
     """
@@ -384,15 +352,6 @@ try:
                 file_name='generated_notes.pdf',
                 mime='application/pdf'
             )
-
-            # Create HTML file
-            html_file = create_html_file(st.session_state.notes.get_markdown_content())
-            st.download_button(
-                label='Download HTML',
-                data=html_file,
-                file_name='generated_notes.html',
-                mime='text/html'
-            )
             st.session_state.button_disabled = False
         else:
             raise ValueError("Please generate content first before downloading the notes.")
@@ -408,7 +367,7 @@ try:
         # Add radio button to choose between file upload and YouTube link
         
         if input_method == "Upload audio file":
-            audio_file = st.file_uploader("Upload an audio file", type=["mp3", "wav", "txt"]) # TODO: Add a max size
+            audio_file = st.file_uploader("Upload an audio file", type=["mp3", "wav", "m4a"]) # TODO: Add a max size
         else:
             youtube_link = st.text_input("Enter YouTube link:", "")
 
@@ -540,4 +499,3 @@ except Exception as e:
     # Remove audio after exception to prevent data storage leak
     if audio_file_path is not None:
         delete_download(audio_file_path)
-
