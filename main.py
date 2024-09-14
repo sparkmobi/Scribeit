@@ -195,7 +195,47 @@ def generate_notes_structure(transcript: str, model: str = "llama-3.1-70b-versat
 "Traditional Compute": "Description of traditional compute approach, including asynchronous nature, queues, and poor utilization of infrastructure",
 "Groq's Approach": "Description of Groq's approach, including pre-orchestrated movement of data, low latency, high energy efficiency, and high utilization of resources",
 "Hardware Implementation": "Igor's explanation of the hardware implementation, including a comparison of GPU and LPU architectures"
-}"""
+"""
+
+        html_example = '''
+The given text is a transcription of the audio recording of educational content.
+Format the content in HTML format as shown in the example output.
+Format the notes using different html tags such as <b>, <mark>, heardings, <ul> to make the notes well strucuture and emphasis on important words and phrases. There should be at least 2 important words or phrases with <mark> tag. After the notes add "----------" as separator on a new line and generate five to ten questions relevant to the content in JSON format. After the questions add "----------" on a new line and add a title for the note.
+
+Example Output:
+
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body>
+  <style>
+  body {font-family: poppins, sans-serif;}
+  body > ul {padding: 0; margin: 20px;} body > ul > * {padding: 5px;} h2 {text-align: center;}
+  
+  </style>
+  <ul>
+    <h2>Topic</h2>
+    <ul>
+        <li><b>Point 1</b></li>
+        <li><mark>Point 2</mark></li>
+        
+    </ul>
+    <ul>
+    <h3>Subtopic</h3>
+        <li><b>Point 3</b></li>
+        <li><mark>Point 4</mark></li>
+  </ul>
+</body>
+</html>
+----------
+[
+  {"question": "Q1?", "answer": "A1"},
+  {"question": "Q2?", "answer": "A2"}
+]
+----------
+Title
+
+'''
     completion = st.session_state.groq.chat.completions.create(
         model=model,
         messages=[
@@ -231,7 +271,7 @@ def generate_section(transcript: str, existing_notes: str, section: str, model: 
             },
             {
                 "role": "user",
-                "content": f"### Transcript\n\n{transcript}\n\n### Existing Notes\n\n{existing_notes}\n\n### Instructions\n\nGenerate comprehensive notes for this section only based on the transcript: \n\n{section} Make sure that you generate it with the same transcribed audio language"
+                "content": f"### Transcript\n\n{transcript}\n\n### Existing Notes\n\n{existing_notes}\n\n### Instructions\n\nGenerate comprehensive notes for this section only based on the transcript: \n\n{section} Make sure that you generate it with the same transcribed audio language. {html_example}"
             }
         ],
         temperature=0.3,
