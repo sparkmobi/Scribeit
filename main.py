@@ -196,8 +196,7 @@ def generate_notes_structure(transcript: str, model: str = "llama-3.1-70b-versat
 "Groq's Approach": "Description of Groq's approach, including pre-orchestrated movement of data, low latency, high energy efficiency, and high utilization of resources",
 "Hardware Implementation": "Igor's explanation of the hardware implementation, including a comparison of GPU and LPU architectures"
 """
-
-        html_example = '''
+    html_example = '''
 The given text is a transcription of the audio recording of educational content.
 Format the content in HTML format as shown in the example output.
 Format the notes using different html tags such as <b>, <mark>, heardings, <ul> to make the notes well strucuture and emphasis on important words and phrases. There should be at least 2 important words or phrases with <mark> tag. After the notes add "----------" as separator on a new line and generate five to ten questions relevant to the content in JSON format. After the questions add "----------" on a new line and add a title for the note.
