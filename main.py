@@ -4,11 +4,9 @@ import json
 import os
 from io import BytesIO
 from md2pdf.core import md2pdf
-from dotenv import load_dotenv
 from download import download_video_audio, delete_download
 from supabase import create_client, Client
 
-load_dotenv()
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", None)
 SUPABASE_URL = 'https://bbglarxiekabgtodknsj.supabase.co'
