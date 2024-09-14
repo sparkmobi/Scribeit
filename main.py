@@ -196,7 +196,7 @@ def generate_notes_structure(transcript: str, model: str = "llama-3.1-70b-versat
 "Groq's Approach": "Description of Groq's approach, including pre-orchestrated movement of data, low latency, high energy efficiency, and high utilization of resources",
 "Hardware Implementation": "Igor's explanation of the hardware implementation, including a comparison of GPU and LPU architectures"
 """
-    html_example = '''
+    html_example = """
 The given text is a transcription of the audio recording of educational content.
 Format the content in HTML format as shown in the example output.
 Format the notes using different html tags such as <b>, <mark>, heardings, <ul> to make the notes well strucuture and emphasis on important words and phrases. There should be at least 2 important words or phrases with <mark> tag. After the notes add "----------" as separator on a new line and generate five to ten questions relevant to the content in JSON format. After the questions add "----------" on a new line and add a title for the note.
@@ -234,7 +234,7 @@ Example Output:
 ----------
 Title
 
-'''
+"""
     completion = st.session_state.groq.chat.completions.create(
         model=model,
         messages=[
@@ -244,7 +244,7 @@ Title
             },
             {
                 "role": "user",
-                "content": f"### Transcript {transcript}\n\n### Example\n\n{shot_example}### Instructions\n\nCreate a structure for comprehensive notes on the above transcribed audio. Section titles and content descriptions must be comprehensive. Quality over quantity. Make sure that you generate it with the same transcribed audio language"
+                "content": f"### Transcript {transcript}\n\n### Example\n\n{shot_example}### Instructions\n\nCreate a structure for comprehensive notes on the above transcribed audio. Section titles and content descriptions must be comprehensive. Quality over quantity. Make sure that you generate it with the same transcribed audio language.  {html_example}"
             }
         ],
         temperature=0.3,
@@ -270,7 +270,7 @@ def generate_section(transcript: str, existing_notes: str, section: str, model: 
             },
             {
                 "role": "user",
-                "content": f"### Transcript\n\n{transcript}\n\n### Existing Notes\n\n{existing_notes}\n\n### Instructions\n\nGenerate comprehensive notes for this section only based on the transcript: \n\n{section} Make sure that you generate it with the same transcribed audio language. {html_example}"
+                "content": f"### Transcript\n\n{transcript}\n\n### Existing Notes\n\n{existing_notes}\n\n### Instructions\n\nGenerate comprehensive notes for this section only based on the transcript: \n\n{section} Make sure that you generate it with the same transcribed audio language."
             }
         ],
         temperature=0.3,
