@@ -169,18 +169,23 @@ def create_pdf_file(content: str):
 
 def transcribe_audio(audio_file):
     """
-    Transcribes audio using Groq's Whisper API.
+    Reads the content of a text file and returns it as the transcription.
     """
-    transcription = st.session_state.groq.audio.transcriptions.create(
-      file=audio_file,
-      model="whisper-large-v3",
-      prompt="",
-      response_format="json",
-      temperature=0.0 
-    )
+    if audio_file.name.endswith('.txt'):
+        # Read the content of the text file
+        transcription = audio_file.read().decode('utf-8')
+    else:
+        # For non-text files, use the original Groq transcription
+        transcription = st.session_state.groq.audio.transcriptions.create(
+            file=audio_file,
+            model="whisper-large-v3",
+            prompt="",
+            response_format="json",
+            temperature=0.0 
+        )
+        transcription = transcription.text
 
-    results = transcription.text
-    return results
+    return transcription
 
 def generate_notes_structure(transcript: str, model: str = "llama-3.1-70b-versatile"):
     """
@@ -367,7 +372,7 @@ try:
         # Add radio button to choose between file upload and YouTube link
         
         if input_method == "Upload audio file":
-            audio_file = st.file_uploader("Upload an audio file", type=["mp3", "wav", "m4a"]) # TODO: Add a max size
+            audio_file = st.file_uploader("Upload an audio file", type=["mp3", "wav", "txt"]) # TODO: Add a max size
         else:
             youtube_link = st.text_input("Enter YouTube link:", "")
 
