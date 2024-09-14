@@ -6,6 +6,7 @@ from io import BytesIO
 from md2pdf.core import md2pdf
 from dotenv import load_dotenv
 from download import download_video_audio, delete_download
+import html
 
 load_dotenv()
 
@@ -166,6 +167,32 @@ def create_pdf_file(content: str):
     md2pdf(pdf_buffer, md_content=content)
     pdf_buffer.seek(0)
     return pdf_buffer
+
+def create_html_file(content: str) -> BytesIO:
+    """
+    Create an HTML file from the provided content.
+    """
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Generated Notes</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }}
+            h1, h2, h3, h4, h5, h6 {{ margin-top: 20px; }}
+        </style>
+    </head>
+    <body>
+        {html.escape(content)}
+    </body>
+    </html>
+    """
+    html_file = BytesIO()
+    html_file.write(html_content.encode('utf-8'))
+    html_file.seek(0)
+    return html_file
 
 def transcribe_audio(audio_file):
     """
@@ -356,6 +383,15 @@ try:
                 data=pdf_file,
                 file_name='generated_notes.pdf',
                 mime='application/pdf'
+            )
+
+            # Create HTML file
+            html_file = create_html_file(st.session_state.notes.get_markdown_content())
+            st.download_button(
+                label='Download HTML',
+                data=html_file,
+                file_name='generated_notes.html',
+                mime='text/html'
             )
             st.session_state.button_disabled = False
         else:
