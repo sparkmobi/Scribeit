@@ -29,7 +29,7 @@ st.set_page_config(
 )
       
 class GenerationStatistics:
-    def __init__(self, input_time=0,output_time=0,input_tokens=0,output_tokens=0,total_time=0,model_name="llama-3.1-8b-instant"):
+    def __init__(self, input_time=0,output_time=0,input_tokens=0,output_tokens=0,total_time=0,model_name="llama3-8b-8192"):
         self.input_time = input_time
         self.output_time = output_time
         self.input_tokens = input_tokens
@@ -176,13 +176,14 @@ def transcribe_audio(audio_file):
       model="whisper-large-v3",
       prompt="",
       response_format="json",
+      language="en",
       temperature=0.0 
     )
 
     results = transcription.text
     return results
 
-def generate_notes_structure(transcript: str, model: str = "llama-3.1-70b-versatile"):
+def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
     """
     Returns notes structure content as well as total tokens and total time for generation.
     """
@@ -195,46 +196,7 @@ def generate_notes_structure(transcript: str, model: str = "llama-3.1-70b-versat
 "Traditional Compute": "Description of traditional compute approach, including asynchronous nature, queues, and poor utilization of infrastructure",
 "Groq's Approach": "Description of Groq's approach, including pre-orchestrated movement of data, low latency, high energy efficiency, and high utilization of resources",
 "Hardware Implementation": "Igor's explanation of the hardware implementation, including a comparison of GPU and LPU architectures"
-"""
-    html_example = """
-The given text is a transcription of the audio recording of educational content.
-Format the content in HTML format as shown in the example output.
-Format the notes using different html tags such as <b>, <mark>, heardings, <ul> to make the notes well strucuture and emphasis on important words and phrases. There should be at least 2 important words or phrases with <mark> tag. After the notes add "----------" as separator on a new line and generate five to ten questions relevant to the content in JSON format. After the questions add "----------" on a new line and add a title for the note.
-
-Example Output:
-
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body>
-  <style>
-  body {font-family: poppins, sans-serif;}
-  body > ul {padding: 0; margin: 20px;} body > ul > * {padding: 5px;} h2 {text-align: center;}
-  
-  </style>
-  <ul>
-    <h2>Topic</h2>
-    <ul>
-        <li><b>Point 1</b></li>
-        <li><mark>Point 2</mark></li>
-        
-    </ul>
-    <ul>
-    <h3>Subtopic</h3>
-        <li><b>Point 3</b></li>
-        <li><mark>Point 4</mark></li>
-  </ul>
-</body>
-</html>
-----------
-[
-  {"question": "Q1?", "answer": "A1"},
-  {"question": "Q2?", "answer": "A2"}
-]
-----------
-Title
-
-"""
+}"""
     completion = st.session_state.groq.chat.completions.create(
         model=model,
         messages=[
@@ -244,7 +206,7 @@ Title
             },
             {
                 "role": "user",
-                "content": f"### Transcript {transcript}\n\n### Example\n\n{shot_example}### Instructions\n\nCreate a structure for comprehensive notes on the above transcribed audio. Section titles and content descriptions must be comprehensive. Quality over quantity. Make sure that you generate it with the same transcribed audio language."
+                "content": f"### Transcript {transcript}\n\n### Example\n\n{shot_example}### Instructions\n\nCreate a structure for comprehensive notes on the above transcribed audio. Section titles and content descriptions must be comprehensive. Quality over quantity."
             }
         ],
         temperature=0.3,
@@ -260,17 +222,17 @@ Title
 
     return statistics_to_return, completion.choices[0].message.content
 
-def generate_section(transcript: str, existing_notes: str, section: str, model: str = "llama-3.1-8b-instant"):
+def generate_section(transcript: str, existing_notes: str, section: str, model: str = "llama3-8b-8192"):
     stream = st.session_state.groq.chat.completions.create(
         model=model,
         messages=[
             {
                 "role": "system",
-                "content": "You are an expert writer. Generate a comprehensive note for the section provided based factually on the transcript provided. Do *not* repeat any content from previous sections. Make sure that you generate it with the same transcribed audio language"
+                "content": "You are an expert writer. Generate a comprehensive note for the section provided based factually on the transcript provided. Do *not* repeat any content from previous sections."
             },
             {
                 "role": "user",
-                "content": f"### Transcript\n\n{transcript}\n\n### Existing Notes\n\n{existing_notes}\n\n### Instructions\n\nGenerate comprehensive notes for this section only based on the transcript: \n\n{section} Make sure that you generate it with the same transcribed audio language."
+                "content": f"### Transcript\n\n{transcript}\n\n### Existing Notes\n\n{existing_notes}\n\n### Instructions\n\nGenerate comprehensive notes for this section only based on the transcript: \n\n{section}"
             }
         ],
         temperature=0.3,
@@ -360,10 +322,10 @@ try:
         st.write(f"---")
 
         st.write("# Customization Settings\n🧪 These settings are experimental.\n")
-        st.write(f"By default, ScribeWizard uses llama-3.1-70b-versatile for generating the notes outline and Llama3-8b for the content. This balances quality with speed and rate limit usage. You can customize these selections below.")
-        outline_model_options = ["llama-3.1-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma-7b-it"]
+        st.write(f"By default, ScribeWizard uses Llama3-70b for generating the notes outline and Llama3-8b for the content. This balances quality with speed and rate limit usage. You can customize these selections below.")
+        outline_model_options = ["llama3-70b-8192", "llama3-8b-8192", "mixtral-8x7b-32768", "gemma-7b-it"]
         outline_selected_model = st.selectbox("Outline generation:", outline_model_options)
-        content_model_options = ["llama-3.1-8b-instant", "llama-3.1-70b-versatile", "mixtral-8x7b-32768", "gemma-7b-it", "gemma2-9b-it"]
+        content_model_options = ["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma-7b-it", "gemma2-9b-it"]
         content_selected_model = st.selectbox("Content generation:", content_model_options)
 
         
