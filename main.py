@@ -183,30 +183,53 @@ def transcribe_audio(audio_file):
     results = transcription.text
     return results
 
-def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
-    """
-    Returns notes structure content as well as total tokens and total time for generation.
-    """
+def generate_notes_structure(transcript: str, model: str = "llama-3.1-70b-versatile"):
+    prompt = """
+Summarize the given transcript into a comprehensive, well-structured summary. Follow these guidelines:
 
-    shot_example = """
-"Introduction": "Introduction to the AMA session, including the topic of Groq scaling architecture and the panelists",
-"Panelist Introductions": "Brief introductions from Igor, Andrew, and Omar, covering their backgrounds and roles at Groq",
-"Groq Scaling Architecture Overview": "High-level overview of Groq's scaling architecture, covering hardware, software, and cloud components",
-"Hardware Perspective": "Igor's overview of Groq's hardware approach, using an analogy of city traffic management to explain the traditional compute approach and Groq's innovative approach",
-"Traditional Compute": "Description of traditional compute approach, including asynchronous nature, queues, and poor utilization of infrastructure",
-"Groq's Approach": "Description of Groq's approach, including pre-orchestrated movement of data, low latency, high energy efficiency, and high utilization of resources",
-"Hardware Implementation": "Igor's explanation of the hardware implementation, including a comparison of GPU and LPU architectures"
-}"""
+1. Use a hierarchical structure with main sections and subsections.
+2. Present information in concise bullet points.
+3. Cover all major topics discussed in the transcript.
+4. Include important technical details and comparisons without overwhelming the reader.
+5. Start with a brief introduction about the speaker and the topic.
+6. End with a "Q&A Highlights" section for any question-and-answer portions.
+7. Conclude with a brief "Closing Thoughts" section summarizing key takeaways.
+
+Your summary should include these main sections:
+- Introduction
+- Key topics discussed (use subsections as needed)
+- Technical insights
+- Future plans and scalability
+- Q&A Highlights
+- Closing Thoughts
+
+Aim for a balance between comprehensiveness and conciseness. The summary should provide a clear overview of the entire transcript while being easy to read and navigate.
+
+Output the summary in JSON format:
+{
+    "Introduction": "Brief introduction text",
+    "Key Topics": {
+        "Topic 1": "Description",
+        "Topic 2": "Description",
+        ...
+    },
+    "Technical Insights": "Technical details",
+    "Future Plans and Scalability": "Future plans",
+    "Q&A Highlights": "Q&A summary",
+    "Closing Thoughts": "Key takeaways"
+}
+"""
+
     completion = st.session_state.groq.chat.completions.create(
         model=model,
         messages=[
             {
                 "role": "system",
-                "content": "Write in JSON format:\n\n{\"Title of section goes here\":\"Description of section goes here\",\"Title of section goes here\":\"Description of section goes here\",\"Title of section goes here\":\"Description of section goes here\"}"
+                "content": "You are an expert summarizer. Create a concise, well-structured summary of the given transcript."
             },
             {
                 "role": "user",
-                "content": f"### Transcript {transcript}\n\n### Example\n\n{shot_example}### Instructions\n\nCreate a structure for comprehensive notes on the above transcribed audio. Section titles and content descriptions must be comprehensive. Quality over quantity."
+                "content": f"### Transcript\n\n{transcript}\n\n### Instructions\n\n{prompt}"
             }
         ],
         temperature=0.3,
@@ -217,22 +240,44 @@ def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
         stop=None,
     )
 
-    usage = completion.usage
-    statistics_to_return = GenerationStatistics(input_time=usage.prompt_time, output_time=usage.completion_time, input_tokens=usage.prompt_tokens, output_tokens=usage.completion_tokens, total_time=usage.total_time, model_name=model)
+    return completion.choices[0].message.content, GenerationStatistics(
+        input_time=completion.usage.prompt_time,
+        output_time=completion.usage.completion_time,
+        input_tokens=completion.usage.prompt_tokens,
+        output_tokens=completion.usage.completion_tokens,
+        total_time=completion.usage.total_time,
+        model_name=model
+    )
 
-    return statistics_to_return, completion.choices[0].message.content
+def generate_section(transcript: str, existing_notes: str, section: str, model: str = "llama-3.1-8b-instant"):
+    prompt = f"""
+Based on the transcript and existing notes, generate a concise summary for the following section:
 
-def generate_section(transcript: str, existing_notes: str, section: str, model: str = "llama3-8b-8192"):
+{section}
+
+Guidelines:
+1. Use bullet points for clarity and conciseness.
+2. Focus on key information and avoid repetition.
+3. Include relevant technical details or comparisons if applicable.
+4. Keep the language clear and accessible.
+5. Ensure the content is factual and based on the transcript.
+
+Existing notes:
+{existing_notes}
+
+Generate the summary in the same language as the transcript.
+"""
+
     stream = st.session_state.groq.chat.completions.create(
         model=model,
         messages=[
             {
                 "role": "system",
-                "content": "You are an expert writer. Generate a comprehensive note for the section provided based factually on the transcript provided. Do *not* repeat any content from previous sections."
+                "content": "You are an expert summarizer. Create concise, bullet-point summaries based on the given information."
             },
             {
                 "role": "user",
-                "content": f"### Transcript\n\n{transcript}\n\n### Existing Notes\n\n{existing_notes}\n\n### Instructions\n\nGenerate comprehensive notes for this section only based on the transcript: \n\n{section}"
+                "content": f"### Transcript\n\n{transcript}\n\n### Instructions\n\n{prompt}"
             }
         ],
         temperature=0.3,
