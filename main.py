@@ -169,19 +169,23 @@ def create_pdf_file(content: str):
 
 def transcribe_audio(audio_file):
     """
-    Transcribes audio using Groq's Whisper API.
+    Reads the content of a text file and returns it as the transcription.
     """
-    transcription = st.session_state.groq.audio.transcriptions.create(
-      file=audio_file,
-      model="whisper-large-v3",
-      prompt="",
-      response_format="json",
-      language="en",
-      temperature=0.0 
-    )
+    if audio_file.name.endswith('.txt'):
+        # Read the content of the text file
+        transcription = audio_file.read().decode('utf-8')
+    else:
+        # For non-text files, use the original Groq transcription
+        transcription = st.session_state.groq.audio.transcriptions.create(
+            file=audio_file,
+            model="whisper-large-v3",
+            prompt="",
+            response_format="json",
+            temperature=0.0 
+        )
+        transcription = transcription.text
 
-    results = transcription.text
-    return results
+    return transcription
 
 def generate_notes_structure(transcript: str, model: str = "llama-3.1-70b-versatile"):
     prompt = """
@@ -240,7 +244,9 @@ Output the summary in JSON format:
         stop=None,
     )
 
-    return completion.choices[0].message.content, GenerationStatistics(
+    notes_structure = completion.choices[0].message.content
+    
+    generation_statistics = GenerationStatistics(
         input_time=completion.usage.prompt_time,
         output_time=completion.usage.completion_time,
         input_tokens=completion.usage.prompt_tokens,
@@ -248,6 +254,8 @@ Output the summary in JSON format:
         total_time=completion.usage.total_time,
         model_name=model
     )
+
+    return notes_structure, generation_statistics
 
 def generate_section(transcript: str, existing_notes: str, section: str, model: str = "llama-3.1-8b-instant"):
     prompt = f"""
@@ -490,8 +498,8 @@ try:
             
 
             display_status("Generating notes structure....")
-            large_model_generation_statistics, notes_structure = generate_notes_structure(transcription_text, model=str(outline_selected_model))
-            print("Structure: ",notes_structure)
+            notes_structure, large_model_generation_statistics = generate_notes_structure(transcription_text, model=str(outline_selected_model))
+            print("Structure: ", notes_structure)
 
             display_status("Generating notes ...")
             total_generation_statistics = GenerationStatistics(model_name=str(content_selected_model))
@@ -500,7 +508,7 @@ try:
 
             try:
                 notes_structure_json = json.loads(notes_structure)
-                notes = NoteSection(structure=notes_structure_json,transcript=transcription_text)
+                notes = NoteSection(structure=notes_structure_json, transcript=transcription_text)
                 
                 if 'notes' not in st.session_state:
                     st.session_state.notes = notes
@@ -510,7 +518,7 @@ try:
                 def stream_section_content(sections):
                     for title, content in sections.items():
                         if isinstance(content, str):
-                            content_stream = generate_section(transcript=transcription_text, existing_notes=notes.return_existing_contents(), section=(title + ": " + content),model=str(content_selected_model))
+                            content_stream = generate_section(transcript=transcription_text, existing_notes=notes.return_existing_contents(), section=(title + ": " + content), model=str(content_selected_model))
                             for chunk in content_stream:
                                 # Check if GenerationStatistics data is returned instead of str tokens
                                 chunk_data = chunk
