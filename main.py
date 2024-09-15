@@ -169,71 +169,44 @@ def create_pdf_file(content: str):
 
 def transcribe_audio(audio_file):
     """
-    Reads the content of a text file and returns it as the transcription.
+    Transcribes audio using Groq's Whisper API.
     """
-    if audio_file.name.endswith('.txt'):
-        # Read the content of the text file
-        transcription = audio_file.read().decode('utf-8')
-    else:
-        # For non-text files, use the original Groq transcription
-        transcription = st.session_state.groq.audio.transcriptions.create(
-            file=audio_file,
-            model="whisper-large-v3",
-            prompt="",
-            response_format="json",
-            temperature=0.0 
-        )
-        transcription = transcription.text
+    transcription = st.session_state.groq.audio.transcriptions.create(
+      file=audio_file,
+      model="whisper-large-v3",
+      prompt="",
+      response_format="json",
+      language="en",
+      temperature=0.0 
+    )
 
-    return transcription
+    results = transcription.text
+    return results
 
-def generate_notes_structure(transcript: str, model: str = "llama-3.1-70b-versatile"):
-    prompt = """
-Summarize the given transcript into a comprehensive, well-structured summary. Follow these guidelines:
+def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
+    """
+    Returns notes structure content as well as total tokens and total time for generation.
+    """
 
-1. Use a hierarchical structure with main sections and subsections.
-2. Present information in concise bullet points.
-3. Cover all major topics discussed in the transcript.
-4. Include important technical details and comparisons without overwhelming the reader.
-5. Start with a brief introduction about the speaker and the topic.
-6. End with a "Q&A Highlights" section for any question-and-answer portions.
-7. Conclude with a brief "Closing Thoughts" section summarizing key takeaways.
-
-Your summary should include these main sections:
-- Introduction
-- Key topics discussed (use subsections as needed)
-- Technical insights
-- Future plans and scalability
-- Q&A Highlights
-- Closing Thoughts
-
-Aim for a balance between comprehensiveness and conciseness. The summary should provide a clear overview of the entire transcript while being easy to read and navigate.
-
-Output the summary in JSON format:
-{
-    "Introduction": "Brief introduction text",
-    "Key Topics": {
-        "Topic 1": "Description",
-        "Topic 2": "Description",
-        ...
-    },
-    "Technical Insights": "Technical details",
-    "Future Plans and Scalability": "Future plans",
-    "Q&A Highlights": "Q&A summary",
-    "Closing Thoughts": "Key takeaways"
-}
-"""
-
+    shot_example = """
+"Introduction": "Introduction to the AMA session, including the topic of Groq scaling architecture and the panelists",
+"Panelist Introductions": "Brief introductions from Igor, Andrew, and Omar, covering their backgrounds and roles at Groq",
+"Groq Scaling Architecture Overview": "High-level overview of Groq's scaling architecture, covering hardware, software, and cloud components",
+"Hardware Perspective": "Igor's overview of Groq's hardware approach, using an analogy of city traffic management to explain the traditional compute approach and Groq's innovative approach",
+"Traditional Compute": "Description of traditional compute approach, including asynchronous nature, queues, and poor utilization of infrastructure",
+"Groq's Approach": "Description of Groq's approach, including pre-orchestrated movement of data, low latency, high energy efficiency, and high utilization of resources",
+"Hardware Implementation": "Igor's explanation of the hardware implementation, including a comparison of GPU and LPU architectures"
+}"""
     completion = st.session_state.groq.chat.completions.create(
         model=model,
         messages=[
             {
                 "role": "system",
-                "content": "You are an expert summarizer. Create a concise, well-structured summary of the given transcript."
+                "content": "Write in JSON format:\n\n{\"Title of section goes here\":\"Description of section goes here\",\"Title of section goes here\":\"Description of section goes here\",\"Title of section goes here\":\"Description of section goes here\"}"
             },
             {
                 "role": "user",
-                "content": f"### Transcript\n\n{transcript}\n\n### Instructions\n\n{prompt}"
+                "content": f"### Transcript {transcript}\n\n### Example\n\n{shot_example}### Instructions\n\nCreate a structure for comprehensive notes on the above transcribed audio. Section titles and content descriptions must be comprehensive. Quality over quantity."
             }
         ],
         temperature=0.3,
@@ -244,48 +217,22 @@ Output the summary in JSON format:
         stop=None,
     )
 
-    notes_structure = completion.choices[0].message.content
-    
-    generation_statistics = GenerationStatistics(
-        input_time=completion.usage.prompt_time,
-        output_time=completion.usage.completion_time,
-        input_tokens=completion.usage.prompt_tokens,
-        output_tokens=completion.usage.completion_tokens,
-        total_time=completion.usage.total_time,
-        model_name=model
-    )
+    usage = completion.usage
+    statistics_to_return = GenerationStatistics(input_time=usage.prompt_time, output_time=usage.completion_time, input_tokens=usage.prompt_tokens, output_tokens=usage.completion_tokens, total_time=usage.total_time, model_name=model)
 
-    return notes_structure, generation_statistics
+    return statistics_to_return, completion.choices[0].message.content
 
-def generate_section(transcript: str, existing_notes: str, section: str, model: str = "llama-3.1-8b-instant"):
-    prompt = f"""
-Based on the transcript and existing notes, generate a concise summary for the following section:
-
-{section}
-
-Guidelines:
-1. Use bullet points for clarity and conciseness.
-2. Focus on key information and avoid repetition.
-3. Include relevant technical details or comparisons if applicable.
-4. Keep the language clear and accessible.
-5. Ensure the content is factual and based on the transcript.
-
-Existing notes:
-{existing_notes}
-
-Generate the summary in the same language as the transcript.
-"""
-
+def generate_section(transcript: str, existing_notes: str, section: str, model: str = "llama3-8b-8192"):
     stream = st.session_state.groq.chat.completions.create(
         model=model,
         messages=[
             {
                 "role": "system",
-                "content": "You are an expert summarizer. Create concise, bullet-point summaries based on the given information."
+                "content": "You are an expert writer. Generate a comprehensive note for the section provided based factually on the transcript provided. Do *not* repeat any content from previous sections."
             },
             {
                 "role": "user",
-                "content": f"### Transcript\n\n{transcript}\n\n### Instructions\n\n{prompt}"
+                "content": f"### Transcript\n\n{transcript}\n\n### Existing Notes\n\n{existing_notes}\n\n### Instructions\n\nGenerate comprehensive notes for this section only based on the transcript: \n\n{section}"
             }
         ],
         temperature=0.3,
@@ -498,8 +445,8 @@ try:
             
 
             display_status("Generating notes structure....")
-            notes_structure, large_model_generation_statistics = generate_notes_structure(transcription_text, model=str(outline_selected_model))
-            print("Structure: ", notes_structure)
+            large_model_generation_statistics, notes_structure = generate_notes_structure(transcription_text, model=str(outline_selected_model))
+            print("Structure: ",notes_structure)
 
             display_status("Generating notes ...")
             total_generation_statistics = GenerationStatistics(model_name=str(content_selected_model))
@@ -508,7 +455,7 @@ try:
 
             try:
                 notes_structure_json = json.loads(notes_structure)
-                notes = NoteSection(structure=notes_structure_json, transcript=transcription_text)
+                notes = NoteSection(structure=notes_structure_json,transcript=transcription_text)
                 
                 if 'notes' not in st.session_state:
                     st.session_state.notes = notes
@@ -518,7 +465,7 @@ try:
                 def stream_section_content(sections):
                     for title, content in sections.items():
                         if isinstance(content, str):
-                            content_stream = generate_section(transcript=transcription_text, existing_notes=notes.return_existing_contents(), section=(title + ": " + content), model=str(content_selected_model))
+                            content_stream = generate_section(transcript=transcription_text, existing_notes=notes.return_existing_contents(), section=(title + ": " + content),model=str(content_selected_model))
                             for chunk in content_stream:
                                 # Check if GenerationStatistics data is returned instead of str tokens
                                 chunk_data = chunk
