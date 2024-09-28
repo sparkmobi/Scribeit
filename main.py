@@ -205,7 +205,7 @@ def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
             },
             {
                 "role": "user",
-                "content": f"### Transcript {transcript}\n\n### Example\n\n{shot_example}### Instructions\n\nCreate a structure for comprehensive notes on the above transcribed audio. Section titles and content descriptions must be comprehensive. Quality over quantity."
+                "content": f"### Transcript {transcript}\n\n### Example\n\n{shot_example}### Instructions\n\nCreate a structure for comprehensive notes on the above transcribed audio. Section titles and content descriptions must be comprehensive. Quality over quantity. in Arabic"
             }
         ],
         temperature=0.3,
@@ -231,7 +231,7 @@ def generate_section(transcript: str, existing_notes: str, section: str, model: 
             },
             {
                 "role": "user",
-                "content": f"### Transcript\n\n{transcript}\n\n### Existing Notes\n\n{existing_notes}\n\n### Instructions\n\nGenerate comprehensive notes for this section only based on the transcript: \n\n{section}"
+                "content": f"### Transcript\n\n{transcript}\n\n### Existing Notes\n\n{existing_notes}\n\n### Instructions\n\nGenerate comprehensive notes for this section only based on the transcript: \n\n{section} in Arabic"
             }
         ],
         temperature=0.3,
