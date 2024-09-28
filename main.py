@@ -182,7 +182,7 @@ def transcribe_audio(audio_file):
     results = transcription.text
     return results
 
-def generate_notes_structure(transcript: str, model: str = "llama3-70b-8192"):
+def generate_notes_structure(transcript: str, model: str = "llama-3.1-70b-versatile"):
     """
     Returns notes structure content as well as total tokens and total time for generation.
     """
@@ -322,9 +322,9 @@ try:
 
         st.write("# Customization Settings\n🧪 These settings are experimental.\n")
         st.write(f"By default, ScribeWizard uses Llama3-70b for generating the notes outline and Llama3-8b for the content. This balances quality with speed and rate limit usage. You can customize these selections below.")
-        outline_model_options = ["llama3-70b-8192", "llama3-8b-8192", "mixtral-8x7b-32768", "gemma-7b-it"]
+        outline_model_options = ["llama-3.1-70b-versatile", "llama3-8b-8192", "mixtral-8x7b-32768", "gemma-7b-it"]
         outline_selected_model = st.selectbox("Outline generation:", outline_model_options)
-        content_model_options = ["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma-7b-it", "gemma2-9b-it"]
+        content_model_options = ["llama3-8b-8192", "llama-3.1-70b-versatile", "mixtral-8x7b-32768", "gemma-7b-it", "gemma2-9b-it"]
         content_selected_model = st.selectbox("Content generation:", content_model_options)
 
         
